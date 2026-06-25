@@ -31,7 +31,7 @@ Issues     = "https://github.com/shravanngoswamii/cpscribe/issues"
 [project.scripts]
 cpscribe = "cpscribe.cli:main"
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.4.0"]
 
 [tool.hatch.build.targets.wheel]
