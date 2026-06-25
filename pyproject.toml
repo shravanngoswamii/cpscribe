@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cpscribe"
+version = "0.1.0"
+description = "Generate blog posts for competitive programming solutions"
+authors = [{ name = "Shravan Goswami", email = "contact@shravangoswami.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["competitive-programming", "codeforces", "blog", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "cloudscraper>=1.2.71",
+    "beautifulsoup4>=4.12.0",
+]
+
+[project.urls]
+Repository = "https://github.com/shravanngoswamii/cpscribe"
+Issues     = "https://github.com/shravanngoswamii/cpscribe/issues"
+
+[project.scripts]
+cpscribe = "cpscribe.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.4.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cpscribe"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
