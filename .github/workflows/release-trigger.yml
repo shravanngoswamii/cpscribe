@@ -1,0 +1,75 @@
+name: Release trigger
+
+on:
+  issue_comment:
+    types:
+      - created
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  trigger:
+    if: github.event_name == 'workflow_dispatch' || github.event.comment.body == '/release'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check write permission
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.payload.comment.user.login,
+            });
+            if (!['admin', 'write'].includes(data.permission)) {
+              core.setFailed(`@${context.payload.comment.user.login} does not have write access`);
+            }
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Read version and verify tag is new
+        id: version
+        shell: bash
+        run: |
+          version="$(grep -m1 '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')"
+          tag="v${version}"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists -- bump the version in pyproject.toml first" >&2
+            exit 1
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          tag="${{ steps.version.outputs.tag }}"
+          msg="Release ${tag}"
+          if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            msg="${msg}"$'\n'"issue=${{ github.event.issue.number }}"$'\n'"comment=${{ github.event.comment.id }}"
+          else
+            msg="${msg}"$'\n'"issue=1"
+          fi
+          git tag -a "${tag}" HEAD -m "${msg}"
+          git push origin "${tag}"
+
+      - name: React with rocket
+        if: success() && github.event_name == 'issue_comment'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket',
+            });

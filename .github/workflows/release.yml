@@ -2,19 +2,152 @@ name: Release
 
 on:
   push:
-    tags: ["v*.*.*"]
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  issues: write
 
 jobs:
-  publish:
+  validate:
+    name: Validate tag
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must look like v1.2.3; got ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          pkg_version="$(grep -m1 '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')"
+          if [[ "$version" != "$pkg_version" ]]; then
+            echo "Tag v$version does not match pyproject.toml version $pkg_version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: Quality gate
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install hatchling -q
-      - run: python -m hatchling build
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - run: pip install -e ".[dev]" -q
+      - run: ruff check src/ tests/
+      - run: ruff format --check src/ tests/
+      - run: pytest -q
+
+  publish:
+    name: Publish
+    needs:
+      - validate
+      - quality
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel and sdist
+        run: |
+          pip install hatchling -q
+          python -m hatchling build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: v${{ needs.validate.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
+
+  notify:
+    name: Notify release comment
+    if: always() && needs.validate.result == 'success'
+    needs:
+      - validate
+      - publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Read trigger context from tag annotation
+        id: ctx
+        run: |
+          annotation=$(git tag -l "${{ github.ref_name }}" --format='%(contents)')
+          issue=$(printf '%s' "$annotation" | grep '^issue=' | cut -d= -f2)
+          comment=$(printf '%s' "$annotation" | grep '^comment=' | cut -d= -f2)
+          echo "issue=${issue}" >> "$GITHUB_OUTPUT"
+          echo "comment=${comment}" >> "$GITHUB_OUTPUT"
+
+      - name: Post release status to issue
+        if: steps.ctx.outputs.issue != ''
+        uses: actions/github-script@v8
+        env:
+          COMMENT_ID: ${{ steps.ctx.outputs.comment }}
+          ISSUE_NUM: ${{ steps.ctx.outputs.issue }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+        with:
+          script: |
+            const tag     = context.ref.replace('refs/tags/', '');
+            const version = tag.replace(/^v/, '');
+            const repo    = `${context.repo.owner}/${context.repo.repo}`;
+
+            const status = r => ({ success: 'success', failure: 'FAILED', cancelled: 'cancelled', skipped: 'skipped' }[r] ?? r);
+            const publishResult = process.env.PUBLISH_RESULT;
+            const allGood = publishResult === 'success';
+
+            const headline = allGood
+              ? `**cpscribe ${tag} released**`
+              : `**cpscribe ${tag} -- some steps failed** -- [view run](https://github.com/${repo}/actions/runs/${context.runId})`;
+
+            const body = [
+              headline,
+              '',
+              '| Destination | Status |',
+              '| :-- | :-- |',
+              `| [GitHub Release](https://github.com/${repo}/releases/tag/${tag}) | ${status(publishResult)} |`,
+              `| [PyPI](https://pypi.org/project/cpscribe/${version}) | ${status(publishResult)} |`,
+            ].join('\n');
+
+            const commentId = process.env.COMMENT_ID ? parseInt(process.env.COMMENT_ID, 10) : null;
+            if (commentId) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: commentId,
+                body: '/release\n\n---\n' + body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(process.env.ISSUE_NUM, 10),
+                body,
+              });
+            }
