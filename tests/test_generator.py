@@ -17,8 +17,9 @@ def test_single_alias(problem):
 
 def test_sections_present(problem):
     md = generator.build("1594", "A", problem, "", "Test Author")
-    for section in ("## Problem Statement", "## Examples", "## Approach", "## Solution", "## What I Learned"):
+    for section in ("## Problem Statement", "## Examples", "## Approach", "## Solution"):
         assert section in md
+    assert "## What I Learned" in md
 
 
 def test_solution_code_injected(problem):

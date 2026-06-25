@@ -46,23 +46,23 @@ Problem Link: [{index}. {name}, {rating} RATED - {contest}]({cf_url})
 
 | Time Limit | Memory Limit |
 | --- | --- |
-| {problem['time_lim']} | {problem['mem_lim']} |
+| {problem["time_lim"]} | {problem["mem_lim"]} |
 
 ## Problem Statement
 
-{problem['body']}
+{problem["body"]}
 
 ### Input
 
-{problem['input_spec']}
+{problem["input_spec"]}
 
 ### Output
 
-{problem['output_spec']}{note_block}
+{problem["output_spec"]}{note_block}
 
 ## Examples
 
-{_fmt_examples(problem['samples'])}
+{_fmt_examples(problem["samples"])}
 
 ## My Understanding
 

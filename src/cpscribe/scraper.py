@@ -94,9 +94,7 @@ def scrape(contest_id: str, index: str) -> dict:
         mem_tag.text.replace("memory limit per test", "").strip() if mem_tag else "256 megabytes"
     )
 
-    body_div = next(
-        (c for c in ps.children if hasattr(c, "get") and not c.get("class")), None
-    )
+    body_div = next((c for c in ps.children if hasattr(c, "get") and not c.get("class")), None)
 
     samples = []
     for block in soup.find_all("div", class_="sample-test"):

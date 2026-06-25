@@ -3,9 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from cpscribe import __version__
+from cpscribe import __version__, generator, scraper
 from cpscribe import config as cfg
-from cpscribe import generator, scraper
 
 
 def cmd_init(_args) -> None:
