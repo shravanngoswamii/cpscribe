@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-26
+
+### Fixed
+
+- CF URL comment lines are stripped from the solution file before embedding in the blog post
+
 ## [0.1.1] - 2026-06-26
 
 ### Fixed
