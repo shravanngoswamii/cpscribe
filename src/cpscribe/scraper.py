@@ -67,14 +67,20 @@ def _sample_pre(div) -> str:
     return pre.get_text().strip()
 
 
-def scrape(contest_id: str, index: str) -> dict:
-    url = f"https://codeforces.com/problemset/problem/{contest_id}/{index}"
-    resp = cloudscraper.create_scraper().get(url, timeout=15)
+def scrape(contest_id: str, index: str, page_url: str | None = None) -> dict:
+    if page_url is None:
+        page_url = f"https://codeforces.com/problemset/problem/{contest_id}/{index}"
+    resp = cloudscraper.create_scraper().get(page_url, timeout=15)
     if resp.status_code != 200:
         sys.exit(f"problem page returned {resp.status_code}")
 
     soup = BeautifulSoup(resp.content, "html.parser")
     ps = soup.find("div", class_="problem-statement")
+    if ps is None:
+        sys.exit(
+            "could not find problem statement -- "
+            "the page may require login (e.g. group or gym contests)"
+        )
 
     header = ps.find("div", class_="header")
     title_div = header.find("div", class_="title") if header else None
@@ -108,6 +114,7 @@ def scrape(contest_id: str, index: str) -> dict:
         "name": name,
         "rating": rating,
         "contest": contest,
+        "url": page_url,
         "time_lim": time_lim,
         "mem_lim": mem_lim,
         "body": _section_md(body_div),

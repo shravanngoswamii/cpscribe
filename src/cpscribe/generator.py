@@ -28,7 +28,7 @@ def build(
     contest = problem["contest"]
     note_block = f"\n\n### Note\n\n{problem['note']}" if problem.get("note") else ""
     pub_dt = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    cf_url = f"https://codeforces.com/problemset/problem/{contest_id}/{index}"
+    cf_url = problem.get("url") or f"https://codeforces.com/problemset/problem/{contest_id}/{index}"
 
     return f"""\
 ---

@@ -34,7 +34,7 @@ def cmd_post(args) -> None:
     cpp_code = cpp_file.read_text().strip() if cpp_file.exists() else "// paste your solution here"
 
     print(f"fetching CF{contest_id}{index}...")
-    problem = scraper.scrape(contest_id, index)
+    problem = scraper.scrape(contest_id, index, url)
     print(f"  {index}. {problem['name']}  {problem['rating']}  {problem['contest']}")
     print(f"  {len(problem['samples'])} sample(s)  {problem['time_lim']}  {problem['mem_lim']}")
 
