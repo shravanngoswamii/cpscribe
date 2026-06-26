@@ -31,7 +31,11 @@ def cmd_post(args) -> None:
 
     if cpp_file is None:
         cpp_file = Path(f"{index}.cpp")
-    cpp_code = cpp_file.read_text().strip() if cpp_file.exists() else "// paste your solution here"
+    if cpp_file.exists():
+        lines = [ln for ln in cpp_file.read_text().splitlines() if not scraper.CF_URL_RE.search(ln)]
+        cpp_code = "\n".join(lines).strip()
+    else:
+        cpp_code = "// paste your solution here"
 
     print(f"fetching CF{contest_id}{index}...")
     problem = scraper.scrape(contest_id, index, url)
