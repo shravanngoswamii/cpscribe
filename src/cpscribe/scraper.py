@@ -5,15 +5,20 @@ import cloudscraper
 from bs4 import BeautifulSoup, NavigableString
 
 CF_URL_RE = re.compile(
-    r"https://codeforces\.com/(?:contest|problemset/problem)/\d+/(?:problem/)?[A-Za-z]\d*"
+    r"https://codeforces\.com/"
+    r"(?:(?:contest|problemset/problem)/\d+/(?:problem/)?|group/\w+/contest/\d+/problem/)"
+    r"[A-Za-z]\d*"
 )
 
 
 def parse_url(url: str) -> tuple[str, str]:
     m = re.search(r"/(?:contest|problemset/problem)/(\d+)/(?:problem/)?([A-Za-z]\d*)", url)
-    if not m:
-        sys.exit(f"could not parse URL: {url}")
-    return m.group(1), m.group(2).upper()
+    if m:
+        return m.group(1), m.group(2).upper()
+    m = re.search(r"/group/\w+/contest/(\d+)/problem/([A-Za-z]\d*)", url)
+    if m:
+        return m.group(1), m.group(2).upper()
+    sys.exit(f"could not parse URL: {url}")
 
 
 def extract_url_from_cpp(text: str) -> str | None:

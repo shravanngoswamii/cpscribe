@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cpscribe"
-version = "0.1.2"
+version = "0.1.3"
 description = "Generate blog posts for competitive programming solutions"
 authors = [{ name = "Shravan Goswami", email = "contact@shravangoswami.com" }]
 license = { text = "MIT" }
