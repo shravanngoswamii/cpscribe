@@ -6,6 +6,10 @@ def _slug(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "-", name).strip("-")
 
 
+def _title(slug: str) -> str:
+    return " ".join(w.capitalize() for w in slug.split("-"))
+
+
 def _fmt_examples(samples: list[tuple[str, str]]) -> str:
     if not samples:
         return "<!-- paste sample inputs/outputs here -->"
@@ -22,6 +26,8 @@ def build(
     problem: dict,
     cpp_code: str,
     author: str,
+    platform: str = "codeforces",
+    section: str | None = None,
 ) -> str:
     name = problem["name"]
     rating = problem["rating"]
@@ -30,16 +36,28 @@ def build(
     pub_dt = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     cf_url = problem.get("url") or f"https://codeforces.com/problemset/problem/{contest_id}/{index}"
 
+    slug_section = section or contest_id
+    slug = f"cp/{platform}/{slug_section}/{index}"
+
+    if platform == "codeforces" and not section:
+        title = f"{index}. {name} (CF{contest_id} {rating} RATED)"
+        tags = f"[CPP, Codeforces, CF{rating}]"
+        description = f"{index}. {name}, {rating} RATED - {contest}"
+        aliases = f"\naliases:\n  - /writing/{contest_id}-{index}-{_slug(name)}"
+    else:
+        title = name
+        tags = f"[CPP, {_title(platform)}]"
+        description = f"{name} — {contest}"
+        aliases = ""
+
     return f"""\
 ---
 author: {author}
 pubDatetime: {pub_dt}
-title: "{index}. {name} (CF{contest_id} {rating} RATED)"
-slug: cp/codeforces/{contest_id}/{index}
-tags: [CPP, Codeforces, CF{rating}]
-description: "{index}. {name}, {rating} RATED - {contest}"
-aliases:
-  - /writing/{contest_id}-{index}-{_slug(name)}
+title: "{title}"
+slug: {slug}
+tags: {tags}
+description: "{description}"{aliases}
 ---
 
 Problem Link: [{index}. {name}, {rating} RATED - {contest}]({cf_url})

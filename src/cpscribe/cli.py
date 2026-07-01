@@ -37,19 +37,26 @@ def cmd_post(args) -> None:
     else:
         cpp_code = "// paste your solution here"
 
+    platform = args.platform or "codeforces"
+    section = args.section or contest_id
+
     print(f"fetching CF{contest_id}{index}...")
     problem = scraper.scrape(contest_id, index, url)
     print(f"  {index}. {problem['name']}  {problem['rating']}  {problem['contest']}")
     print(f"  {len(problem['samples'])} sample(s)  {problem['time_lim']}  {problem['mem_lim']}")
 
-    out_dir = Path(conf["blog_root"]) / contest_id
+    out_dir = Path(conf["blog_root"]) / section
     out_file = out_dir / f"{index}.md"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if out_file.exists() and not args.force:
         sys.exit(f"already exists: {out_file}  (--force to overwrite)")
 
-    out_file.write_text(generator.build(contest_id, index, problem, cpp_code, conf["author"]))
+    explicit_section = section if args.section else None
+    content = generator.build(
+        contest_id, index, problem, cpp_code, conf["author"], platform, explicit_section
+    )
+    out_file.write_text(content)
     print(f"created: {out_file}")
 
     editor = args.editor or conf["editor"]
@@ -72,6 +79,10 @@ def main() -> None:
     post.add_argument("solution", nargs="?", metavar="solution.cpp")
     post.add_argument("--force", action="store_true", help="overwrite existing post")
     post.add_argument("--editor", metavar="CMD")
+    post.add_argument("--platform", metavar="SLUG", help="platform slug (default: codeforces)")
+    post.add_argument(
+        "--section", metavar="NAME", help="section/chapter name (overrides contest ID in path)"
+    )
 
     args = parser.parse_args()
     {"init": cmd_init, "post": cmd_post}[args.command](args)
